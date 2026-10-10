@@ -95,7 +95,7 @@ export class ComfyUIClient {
     return {
       imageNode: nodes.find(([, node]) => node.class_type === "LoadImage")?.[0] || "",
       promptNode: (nodes.find(([, node]) => "prompt" in node.inputs)
-        || nodes.find(([, node]) => node.class_type === "CLIPTextEncode" && "text" in node.inputs))?.[0] || "",
+        || nodes.find(([, node]) => "text" in node.inputs))?.[0] || "",
       dimensionNode: nodes.find(([, node]) => "width" in node.inputs && "height" in node.inputs)?.[0] || "",
       pixelNode: nodes.find(([, node]) => "megapixels" in node.inputs || "resolution_steps" in node.inputs)?.[0] || "",
       samplerNode: nodes.filter(([, node]) => /sampler/i.test(node.class_type)).map(([id]) => id).join(",")
@@ -160,7 +160,9 @@ export class ComfyUIClient {
       "prompt" in (result[id]?.inputs || {}) || "text" in (result[id]?.inputs || {})
     ).join(","));
     const imageIds = mappedImageIds.length ? mappedImageIds : (connectImage ? this.parseNodeIds(autoNodes.imageNode) : []);
-    const promptIds = mappedPromptIds;
+    const promptIds = mappedPromptIds.length
+      ? mappedPromptIds
+      : (positivePrompt ? this.parseNodeIds(autoNodes.promptNode) : []);
     const hasImageInput = entries.some(([nodeId, node]) =>
       node.class_type === "LoadImage" && typeof node.inputs.image === "string" && (!imageIds.length || imageIds.includes(nodeId))
     );

@@ -506,14 +506,14 @@ function renderMaterialInputs() {
   const project = materialProject();
   if (!project) return;
   refs.materialTextGrid.innerHTML = state.materialTexts.length ? state.materialTexts.map(item => `
-    <article class="material-text-card" data-material-text="${escapeHtml(item.file)}" title="${escapeHtml(item.title)}">
+    <article class="material-text-card" data-material-text="${escapeHtml(item.file)}" title="${escapeHtml(item.title)}" draggable="true">
       <span class="material-text-title">${escapeHtml(item.title)}</span>
       <small>双击打开 · ${new Date(item.updatedAt).toLocaleString("zh-CN")}</small>
     </article>
   `).join("") : `<div class="material-empty">暂无 Markdown 文本</div>`;
 
   refs.materialImageGrid.innerHTML = state.materialImages.length ? state.materialImages.map(item => `
-    <figure class="material-image-card" data-material-image="${escapeHtml(item.file)}">
+    <figure class="material-image-card" data-material-image="${escapeHtml(item.file)}" draggable="true">
       <img src="${escapeHtml(item.url)}" alt="${escapeHtml(item.file)}" loading="lazy">
       <figcaption title="${escapeHtml(item.file)}">${escapeHtml(item.file)}</figcaption>
       <button class="button ghost small material-image-delete" data-material-delete="${escapeHtml(item.file)}">删除</button>
@@ -673,6 +673,57 @@ async function deleteMaterialImage(fileName) {
     toast("原图已删除");
   } catch (error) {
     toast(error.message, "error");
+  }
+}
+
+function setMaterialDragData(event, material) {
+  event.dataTransfer.setData("text/plain", JSON.stringify(material));
+  event.dataTransfer.effectAllowed = "copy";
+}
+
+function assetCardIndex(card) {
+  return Number(card?.querySelector("[data-index]")?.dataset.index);
+}
+
+async function applyTextMaterialToCard(index, material) {
+  const shot = state.blueprint?.shots[index];
+  if (!shot) return;
+  const response = await fetch(materialUrl("/api/materials/text/content", { file: material.file }));
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || "读取拖拽文本失败");
+  shot.positive_prompt = String(result.content || "");
+  syncPromptNodeValues(shot);
+  renderBlueprint();
+  persistProjects();
+  toast(`提示词已导入到素材 ${shot.sequence || index + 1}`);
+}
+
+async function applyImageMaterialToCard(index, material) {
+  const shot = state.blueprint?.shots[index];
+  if (!shot) return;
+  const response = await fetch(material.url || materialUrl("/api/materials/image", { file: material.file }));
+  if (!response.ok) throw new Error(`读取拖拽图片失败 ${response.status}`);
+  const blob = await response.blob();
+  const file = new File([blob], material.file || "reference.png", { type: blob.type || "image/png" });
+  shot.usecase = "image_to_image";
+  shot.sourceImageName = file.name;
+  referenceFiles.set(assetKey(index), file);
+  renderBlueprint();
+  persistProjects();
+  await connectReferenceToWorkflow(index);
+  toast(`原图已导入到素材 ${shot.sequence || index + 1}`);
+}
+
+async function dropMaterialOnCard(event, card) {
+  const payload = event.dataTransfer.getData("text/plain");
+  const material = payload ? JSON.parse(payload) : null;
+  if (!material?.type) return;
+  const index = assetCardIndex(card);
+  if (!Number.isInteger(index)) return;
+  if (material.type === "text") {
+    await applyTextMaterialToCard(index, material);
+  } else if (material.type === "image") {
+    await applyImageMaterialToCard(index, material);
   }
 }
 
@@ -1048,7 +1099,7 @@ function renderBlueprint() {
     const sequence = shot.sequence || index + 1;
     const needsReference = shot.usecase === "image_to_image";
     return `
-      <article class="asset-card" data-card-id="${escapeHtml(shot.id)}">
+      <article class="asset-card" data-card-id="${escapeHtml(shot.id)}" data-material-drop-target>
         <div class="asset-head">
           <h3>${escapeHtml(sequence)} · ${escapeHtml(shot.title)}</h3>
           <button class="button ghost small" data-action="delete-card" data-index="${index}" ${shot.queueState === "running" ? "disabled" : ""}>删除</button>
@@ -1075,6 +1126,12 @@ function renderBlueprint() {
             <span>调用工作流</span>
             <select data-field="workflow" data-index="${index}">${workflowOptions(shot.workflow || "k2_anything2real_v3")}</select>
           </label>
+          ${needsReference ? "" : `
+          <label class="field">
+            <span>生图提示词</span>
+            <textarea data-field="positive_prompt" data-index="${index}" rows="4" spellcheck="false">${escapeHtml(shot.positive_prompt || "")}</textarea>
+          </label>
+          `}
           <p class="asset-ref" data-ref-label>${needsReference ? "素材图：未选择" : "文生图：无需素材图"}</p>
           ${needsReference ? `
           <label class="button secondary full">
@@ -1122,6 +1179,20 @@ function cardByIndex(index) {
 function assetKey(index) {
   const shot = state.blueprint.shots[index];
   return `${state.activeProjectId}:${state.activeEpisodeId}:${shot.id}`;
+}
+
+function syncPromptNodeValues(shot) {
+  if (!shot?.workflowParams) return;
+  shot.workflowParams.nodeValues = shot.workflowParams.nodeValues || {};
+  const workflowInfo = state.workflowNodeInfos.get(shot.workflow)?.workflow || {};
+  for (const nodeId of shot.workflowParams.nodeIds || []) {
+    const inputs = workflowInfo[nodeId]?.inputs || {};
+    const promptName = "prompt" in inputs ? "prompt" : "text" in inputs ? "text" : "";
+    if (promptName) {
+      shot.workflowParams.nodeValues[nodeId] = shot.workflowParams.nodeValues[nodeId] || {};
+      shot.workflowParams.nodeValues[nodeId][promptName] = shot.positive_prompt || "";
+    }
+  }
 }
 
 function updateReferenceLabel(index) {
@@ -1338,6 +1409,10 @@ function updateShotFromInput(index, field, value) {
     shot.cfg = Math.min(30, Math.max(1, Number(value) || shot.cfg));
   } else if (field === "denoise") {
     shot.denoise = Math.min(1, Math.max(0, Number(value) || 0));
+  } else if (field === "positive_prompt") {
+    shot.positive_prompt = value;
+    syncPromptNodeValues(shot);
+    persistProjects();
   } else if (field === "usecase") {
     shot.usecase = value;
     updateReferenceLabel(index);
@@ -1860,6 +1935,42 @@ function registerEvents() {
   refs.materialImageGrid.addEventListener("dblclick", event => {
     const card = event.target.closest("[data-material-image]");
     if (card) openMaterialImage(card.dataset.materialImage);
+  });
+  refs.materialTextGrid.addEventListener("dragstart", event => {
+    const card = event.target.closest("[data-material-text]");
+    const material = state.materialTexts.find(item => item.file === card?.dataset.materialText);
+    if (material) setMaterialDragData(event, { type: "text", ...material });
+  });
+  refs.materialImageGrid.addEventListener("dragstart", event => {
+    const card = event.target.closest("[data-material-image]");
+    const material = state.materialImages.find(item => item.file === card?.dataset.materialImage);
+    if (material) setMaterialDragData(event, { type: "image", ...material });
+  });
+  refs.assetGrid.addEventListener("dragover", event => {
+    const card = event.target.closest("[data-material-drop-target]");
+    if (!card || !event.dataTransfer.types.includes("text/plain")) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+    refs.assetGrid.querySelectorAll(".material-drop-target").forEach(item => item.classList.remove("material-drop-target"));
+    card.classList.add("material-drop-target");
+  });
+  refs.assetGrid.addEventListener("dragleave", () => {
+    refs.assetGrid.querySelectorAll(".material-drop-target").forEach(item => item.classList.remove("material-drop-target"));
+  });
+  refs.assetGrid.addEventListener("drop", async event => {
+    const card = event.target.closest("[data-material-drop-target]");
+    if (!card) return;
+    event.preventDefault();
+    card.classList.remove("material-drop-target");
+    try {
+      await dropMaterialOnCard(event, card);
+    } catch (error) {
+      toast(error.message, "error");
+      log(`拖拽导入失败：${error.message}`, "error");
+    }
+  });
+  refs.assetGrid.addEventListener("dragend", () => {
+    refs.assetGrid.querySelectorAll(".material-drop-target").forEach(item => item.classList.remove("material-drop-target"));
   });
   refs.materialImageGrid.addEventListener("click", event => {
     const button = event.target.closest("[data-material-delete]");

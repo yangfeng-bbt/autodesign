@@ -153,6 +153,8 @@ h2 { font-size: 16px; margin-bottom: 14px; }
   transition: 0.18s ease;
 }
 .material-text-card:hover { border-color: rgba(93,242,200,0.55); transform: translateY(-1px); }
+.material-text-card { cursor: grab; }
+.material-text-card:active { cursor: grabbing; }
 .material-text-title {
   display: block;
   overflow: hidden;
@@ -200,6 +202,10 @@ h2 { font-size: 16px; margin-bottom: 14px; }
   transition: opacity 0.15s ease;
 }
 .material-image-card:hover .material-image-delete { opacity: 1; }
+.material-drop-target {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 2px rgba(93,242,200,0.22), var(--shadow);
+}
 .material-empty {
   grid-column: 1 / -1;
   min-height: 130px;

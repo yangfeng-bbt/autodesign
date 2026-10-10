@@ -33,6 +33,9 @@ function safeProjectSegment(value, fallback = "默认项目") {
     .replace(/[\\/:*?"<>|]/g, "_")
     .replace(/^\.+/, "")
     .replace(/\s+/g, " ")
+    .replace(/\s+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "")
     .trim()
     .slice(0, 80);
   return segment || fallback;
