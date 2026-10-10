@@ -1,0 +1,10 @@
+{
+  "name": "autodesign",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser-based semi-automatic asset studio for local ComfyUI",
+  "scripts": {
+    "start": "node server.mjs"
+  }
+}

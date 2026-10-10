@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AutoDesign · 本地 ComfyUI 素材工坊</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./assets/styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <p class="eyebrow">Semi-automatic Asset Studio</p>
+      <h1>AutoDesign</h1>
+      <p class="subtitle">前端直连本地 ComfyUI · 多工作流素材卡 · 按幕无人值守产出</p>
+    </div>
+    <div class="connection-pill" id="connectionPill">
+      <span class="status-dot offline"></span>
+      <span id="connectionText">未连接</span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel controls-panel">
+      <section class="panel-block">
+        <h2>ComfyUI</h2>
+        <label class="field">
+          <span>API 地址</span>
+          <input id="comfyUrl" value="/comfy" spellcheck="false">
+        </label>
+        <button class="button secondary full" id="connectButton">连接 ComfyUI</button>
+      </section>
+
+      <section class="panel-block">
+        <h2>项目管理</h2>
+        <div class="field-row">
+          <label class="field">
+            <span>新项目名称</span>
+            <input id="newProjectName" value="宇宙骑士cover混对混" spellcheck="false">
+          </label>
+          <label class="field">
+            <span>类型</span>
+            <select id="newProjectMode">
+              <option value="drama">漫剧</option>
+              <option value="mv">MV</option>
+            </select>
+          </label>
+        </div>
+        <div class="field-row">
+          <label class="field">
+            <span>幕数量</span>
+            <input id="newActCount" type="number" min="1" max="100" value="11">
+          </label>
+        </div>
+        <button class="button primary full" id="createProjectButton">新建项目并初始化幕</button>
+        <label class="field">
+          <span>当前项目</span>
+          <select id="activeProject"><option>暂无项目</option></select>
+        </label>
+        <label class="field">
+          <span>幕表</span>
+          <select id="activeEpisode"><option>暂无幕</option></select>
+        </label>
+        <label class="field">
+          <span>本幕时长（秒）</span>
+          <input id="episodeDuration" type="number" min="1" max="600" step="1" value="8">
+        </label>
+        <div class="field-row">
+          <label class="field">
+            <span>调整幕数量</span>
+            <input id="actCountInput" type="number" min="1" max="100" value="11">
+          </label>
+        </div>
+        <label class="field">
+          <span>幕表导入（每行：标题 | 秒数）</span>
+          <textarea id="actPlanInput" rows="8" spellcheck="false">美亚赴死变身 | 8
+美亚 vs 四机甲 | 8
+美亚自爆 | 8
+兄弟地球战斗 | 8
+太空站战斗 | 8
+月球表面战斗 | 8
+超进化 | 8
+对轰等离子炮 | 8
+水晶变身·前往最终基地 | 8
+白卡斯挡致命一击 | 8
+法相天地击毁最终反派 | 7</textarea>
+        </label>
+        <div class="button-stack">
+          <button class="button secondary full" id="applyStructureButton">同步幕数量</button>
+          <button class="button secondary full" id="applyActPlanButton">同步幕名 / 时长</button>
+          <button class="button ghost full" id="deleteProjectButton">删除当前项目</button>
+        </div>
+      </section>
+
+      <section class="panel-block">
+        <h2>批量执行</h2>
+        <p class="queue-summary" id="productionQueueText">待生产队列：0 项</p>
+        <div class="button-stack">
+          <button class="button success full" id="batchButton">无人值守生成当前幕</button>
+          <button class="button success full" id="batchProjectButton">无人值守生成整个项目</button>
+          <button class="button primary full" id="processQueueButton">开始生产队列</button>
+          <button class="button ghost full" id="clearQueueButton">清空待生产队列</button>
+          <button class="button secondary full" id="exportButton">导出规格 Markdown</button>
+          <button class="button ghost full" id="stopButton" disabled>停止队列</button>
+        </div>
+      </section>
+    </section>
+
+    <section class="panel workspace-panel" id="workspacePanel">
+      <div class="workspace-header">
+        <div>
+          <h2>素材工作台</h2>
+          <p id="projectTitle">尚未生成规格</p>
+        </div>
+        <div class="workspace-side">
+          <div class="workspace-tabs">
+            <button class="workspace-tab active" data-workspace-tab="worksheet">素材工作台</button>
+            <button class="workspace-tab" data-workspace-tab="queue">生产队列管理</button>
+          </div>
+          <div class="queue-meter">
+            <span id="queueText">0 / 0</span>
+            <div class="meter"><div id="queueBar"></div></div>
+          </div>
+        </div>
+      </div>
+      <section id="worksheetView">
+        <section id="materialInputModule" class="material-module">
+          <div class="material-head">
+            <div>
+              <h3>素材输入区</h3>
+              <p id="materialPath">项目本地素材文件</p>
+            </div>
+            <div class="material-tools">
+              <div class="mode-tabs">
+                <button class="mode-tab active" data-material-mode="text">文本</button>
+                <button class="mode-tab" data-material-mode="image">图片</button>
+              </div>
+              <button class="button ghost small" id="refreshMaterialButton">刷新</button>
+              <button class="button secondary small" id="importImageButton" hidden>导入原图</button>
+              <input id="materialImageInput" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden>
+            </div>
+          </div>
+          <div id="materialTextGrid" class="material-text-grid"></div>
+          <div id="materialImageGrid" class="material-image-grid" hidden></div>
+        </section>
+        <div class="worksheet-toolbar">
+          <button class="button primary" id="addCardButton">添加图片生成卡片</button>
+        </div>
+        <div id="emptyState" class="empty-state">
+          <strong>先创建项目与幕，再添加图片生成卡片</strong>
+          <p>每张卡片可独立配置工作流、素材图和节点参数。</p>
+        </div>
+        <div id="assetGrid" class="asset-grid"></div>
+      </section>
+      <section id="queueManagerView" class="queue-manager" hidden>
+        <div class="queue-manager-head">
+          <div>
+            <h3>生产队列</h3>
+            <p>按项目、幕、序号严格排序执行。</p>
+          </div>
+          <div class="button-stack horizontal">
+            <button class="button success" id="queuePageStartButton">开始队列</button>
+            <button class="button ghost" id="queuePageStopButton" disabled>停止队列</button>
+            <button class="button ghost" id="queuePageClearButton">清空队列</button>
+          </div>
+        </div>
+        <div id="queueItems" class="queue-items"></div>
+      </section>
+    </section>
+  </main>
+
+  <section class="log-panel">
+    <div class="log-header">
+      <h2>执行日志</h2>
+      <button class="button ghost small" id="clearLogButton">清空</button>
+    </div>
+    <pre id="log"></pre>
+  </section>
+
+  <div id="toast" class="toast"></div>
+  <div id="materialTextModal" class="material-modal" hidden>
+    <div class="material-modal-body text-modal">
+      <div class="material-modal-head">
+        <h3 id="materialTextTitle">文本</h3>
+        <div class="button-stack horizontal">
+          <span id="materialSaveState" class="material-save-state"></span>
+          <button class="button secondary small" id="copyMaterialTextButton">复制</button>
+          <button class="button primary small" id="saveMaterialTextButton" disabled>保存</button>
+          <button class="button ghost small" data-close-material-modal>关闭</button>
+        </div>
+      </div>
+      <textarea id="materialTextEditor" spellcheck="false"></textarea>
+    </div>
+  </div>
+  <div id="materialImageModal" class="material-modal" hidden>
+    <div class="material-modal-body image-modal">
+      <div class="material-modal-head">
+        <h3 id="materialImageTitle">原图</h3>
+        <button class="button ghost small" data-close-material-modal>关闭</button>
+      </div>
+      <img id="materialLargeImage" alt="原图预览">
+    </div>
+  </div>
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

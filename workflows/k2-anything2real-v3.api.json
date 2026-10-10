@@ -1,0 +1,299 @@
+{
+  "339": {
+    "inputs": {
+      "filename_prefix": "ComfyUI",
+      "images": [
+        "342",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "保存图像"
+    }
+  },
+  "342": {
+    "inputs": {
+      "samples": [
+        "343",
+        0
+      ],
+      "vae": [
+        "355",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE解码"
+    }
+  },
+  "343": {
+    "inputs": {
+      "seed": [
+        "357",
+        0
+      ],
+      "steps": 4,
+      "cfg": 1,
+      "sampler_name": "er_sde",
+      "scheduler": "simple",
+      "denoise": 0.18,
+      "model": [
+        "353",
+        0
+      ],
+      "positive": [
+        "352",
+        0
+      ],
+      "negative": [
+        "350",
+        0
+      ],
+      "latent_image": [
+        "344",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "K采样器"
+    }
+  },
+  "344": {
+    "inputs": {
+      "pixels": [
+        "346",
+        0
+      ],
+      "vae": [
+        "355",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE编码"
+    }
+  },
+  "345": {
+    "inputs": {
+      "auto_resize": "crop",
+      "vl_size": 384,
+      "prompt": "transform the image to realistic photograph",
+      "system_prompt": "Describe the key features of the input image (color, shape, size, texture, objects, background), then explain how the user's text instruction should alter or modify the image. Generate a new image that meets the user's requirements while maintaining consistency with the original input where appropriate.",
+      "clip": [
+        "354",
+        0
+      ],
+      "vae": [
+        "355",
+        0
+      ],
+      "image1": [
+        "349",
+        0
+      ],
+      "latent_image": [
+        "349",
+        0
+      ]
+    },
+    "class_type": "Easy_QwenEdit2509",
+    "_meta": {
+      "title": "Easy_QwenEdit2509"
+    }
+  },
+  "346": {
+    "inputs": {
+      "upscale_method": "lanczos",
+      "scale_by": 1.2,
+      "image": [
+        "348",
+        0
+      ]
+    },
+    "class_type": "ImageScaleBy",
+    "_meta": {
+      "title": "缩放图像（比例）"
+    }
+  },
+  "347": {
+    "inputs": {
+      "seed": [
+        "357",
+        0
+      ],
+      "steps": 8,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": [
+        "353",
+        0
+      ],
+      "positive": [
+        "352",
+        0
+      ],
+      "negative": [
+        "350",
+        0
+      ],
+      "latent_image": [
+        "345",
+        2
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "K采样器"
+    }
+  },
+  "348": {
+    "inputs": {
+      "samples": [
+        "347",
+        0
+      ],
+      "vae": [
+        "355",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE解码"
+    }
+  },
+  "349": {
+    "inputs": {
+      "upscale_method": "lanczos",
+      "megapixels": 1.5,
+      "resolution_steps": 8,
+      "image": [
+        "351",
+        0
+      ]
+    },
+    "class_type": "ImageScaleToTotalPixels",
+    "_meta": {
+      "title": "缩放图像（像素）"
+    }
+  },
+  "350": {
+    "inputs": {
+      "reference_latents_method": "index_timestep_zero",
+      "conditioning": [
+        "345",
+        1
+      ]
+    },
+    "class_type": "FluxKontextMultiReferenceLatentMethod",
+    "_meta": {
+      "title": "FluxKontext多参考潜在方法"
+    }
+  },
+  "351": {
+    "inputs": {
+      "image": "美雪.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "加载图像"
+    }
+  },
+  "352": {
+    "inputs": {
+      "reference_latents_method": "index_timestep_zero",
+      "conditioning": [
+        "345",
+        0
+      ]
+    },
+    "class_type": "FluxKontextMultiReferenceLatentMethod",
+    "_meta": {
+      "title": "FluxKontext多参考潜在方法"
+    }
+  },
+  "353": {
+    "inputs": {
+      "kv_cache": true,
+      "model": [
+        "356",
+        0
+      ]
+    },
+    "class_type": "Krea2OstrisEditModelPatch",
+    "_meta": {
+      "title": "Krea 2 Ostris Edit Model"
+    }
+  },
+  "354": {
+    "inputs": {
+      "clip_name": "qwen3vl_4b_fp8_scaled.safetensors",
+      "type": "krea2",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "加载CLIP"
+    }
+  },
+  "355": {
+    "inputs": {
+      "vae_name": "qwen_image_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "加载VAE"
+    }
+  },
+  "356": {
+    "inputs": {
+      "lora_name": "Krea2_Anything2RealCharacters-V3.safetensors",
+      "strength_model": 1,
+      "model": [
+        "358",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "LoRA加载器（仅模型）"
+    }
+  },
+  "357": {
+    "inputs": {
+      "seed": 666
+    },
+    "class_type": "Seed (rgthree)",
+    "_meta": {
+      "title": "Seed (rgthree)"
+    }
+  },
+  "358": {
+    "inputs": {
+      "unet_name": "Krea2-ultra_v16_int8_convrot.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "UNet加载器"
+    }
+  },
+  "363": {
+    "inputs": {
+      "images": [
+        "348",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "预览图像"
+    }
+  }
+}
